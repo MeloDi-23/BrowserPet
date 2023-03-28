@@ -1,22 +1,36 @@
+let img;
+let windowSize = [document.body.clientLeft, document.body.clientHeight];
+let random = (lower, upper) => Math.random()*(upper - lower) + lower;
+let randInt = (max) => Math.floor(Math.random()*max);
+let rangeMapsToList = function(end, func) {
+    let ret = new Array();
+    for(let i = 0; i < end; i++) {
+        ret.push(func(i));
+    }
+    return ret;
+}
 let Pet = {
     possibleAnimations: {
-        waiting: {name: 'wait', frames: ['slime_wait.png']},
-        walk_left: {name: 'walk_left', frames: ['slime_walk.png']},
-        walk_right: {name: 'walk_right', frames: ['slime_walk.png']},
-        sleep: {name: 'sleep', frames: ['slime_sleep.png']}
+        wait_left: {name: 'wait_left', frames: rangeMapsToList(3, i => `./img/wait_left/${i+1}.png`)},
+        wait_right: {name: 'wait_right', frames: rangeMapsToList(3, i => `./img/wait_right/${i+1}.png`)},
+        shake_head: {name: 'shake_head', frames: rangeMapsToList(2, i => `./img/shake_head/${i+1}.png`)},
+        walk_left: {name: 'walk_left', frames: rangeMapsToList(6, i => `./img/walk_left/${i+1}.png`)},
+        walk_right: {name: 'walk_right', frames: rangeMapsToList(6, i => `./img/walk_right/${i+1}.png`)},
+        // tested, all paths are valid
     },
-    currentState: '',
-    currentAnimation: null,
     position: new Array(),
-    startTime: 0,
-    startPosition: null,
+    currentAction: {
+        startTime: 0,
+        startPosition: null,
+        animation: null,
+    },
     updateImg: function(time) {
-        let passes = time - this.startTime;
-        switch(this.currentState.name) {
-            case 'move': 
-                if(this.currentState.speed) {
+        let passes = time - this.currentAction.startTime;
+        switch(this.currentAction.name) {
+            case 'move':
+                if(this.currentAction.speed) {
                     // 有速度方向的情况
-                } else if(this.currentState.func) {
+                } else if(this.currentAction.func) {
                     // 有位置函数的情况
                 }
                 break;
@@ -25,46 +39,57 @@ let Pet = {
         }
         
     },
-    setState: function(state) {
+    setAction: function(action) {
         /**
-         * state demonstrates how the pet moves, 
+         * action demonstrates how the pet moves, 
          * eg:
          * - wait.
          * - move (direction, speed).
-         * - move (a func which demonstrates the position of pet as time passes).
+         * - move (speedX, speedY).
+         * - move (a func which demonstrates the position of pet and its velocity as time passes).
          * - move (destination, speed).
          * - listening: the browser will listen to the click and demonstrate whether to make pet move.
          */
-        this.startTime = performance.now();
-        this.currentState = state;
-        if(state.name == 'wait') {
-            if(state.animationName) {
-                this.currentAnimation = this.possibleAnimations[state.animationName];
-            } else 
-            if(Math.random() > 0.5) {
-                this.currentAnimation = this.possibleAnimations.sleep;
-            } else {
-                this.currentAnimation = this.possibleAnimations.waiting;
-            }
-        } else if(state.name == 'move') {
-            this.startPosition = [
-                img.offSetLeft,
-                img.offSetTop
-            ];
-            if(state.direction) {
-                this.currentAnimation = chooseAnimation(state.direction);
-                // TODO: 编写chooseAnimation
-            }
+        let act = this.currentAction;
+        act.startTime = performance.now();
+        act.name = action.name;
+        switch(action.name) {
+            case 'wait':
+                if(action.animationName) {
+                    this.currentAnimation = this.possibleAnimations[action.animationName];
+                } else 
+                if(Math.random() > 0.5) {
+                    this.currentAnimation = this.possibleAnimations.sleep;
+                } else {
+                    this.currentAnimation = this.possibleAnimations.waiting;
+                }
+                break;
+            case 'move':
+                act.startPosition = [
+                    img.offSetLeft,
+                    img.offSetTop
+                ];
+                if(action.direction) {
+                    act.speedX = action.speed*Math.cos(action.direction);
+                    act.speedY = action.speed*Math.sin(action.direction);
+                    // TODO: 编写chooseAnimation, 根据速度方向确定动画
+                } else if(!isNaN(action.speedX)) {
+                    act.speedX = action.speedX;
+                    act.speedY = action.speedY;
+                } else if(action.destination) {
+                    act.destination = action.destination;
+                    let pos1 = this.position, pos2 = act.destination;
+                    let x = pos1[0] - pos2[0], y = pos1[1] - pos2[1];
+                    let distance = Math.sqrt(x*x + y*y);
+                    act.speedX = action.speed*x/distance;
+                    act.speedY = action.speed*y/distance;
+                }
+                break;
         }
-        
     }
 };
-let img;
-let windowSize = [document.body.clientLeft, document.body.clientHeight];
-let random = (lower, upper) => Math.random()*(upper - lower) + lower;
-let randInt = (max) => Math.floor(Math.random()*max);
+
 function init() {
-    img = document.createElement('img');
 
     window.onresize = () => {
         windowSize = [document.body.clientLeft, document.body.clientHeight];
@@ -76,6 +101,7 @@ function init() {
         }
     };
     initImg();
+    document.body.appendChild(img);
 
     setInterval(
         randomState,
@@ -96,10 +122,27 @@ function init() {
 }
 
 function initImg() {
+    img = document.createElement('img');
+
     img.style.position = 'fixed';
     img.style.height = windowSize[1] * 0.1;
 
     img.style.left = random(windowSize[0]*0.1, windowSize[0]*0.9) + 'px';
     img.style.top = random(windowSize[1]*0.1, windowSize[1]*0.9) + 'px';
     randomState();
+}
+
+
+window.onload = function() {
+    for(let e in Pet.possibleAnimations) {
+        let div = document.createElement('div');
+        div.innerHTML = e;
+        document.body.appendChild(div);
+        
+        for(let s of Pet.possibleAnimations[e].frames) {
+            let img = document.createElement('img');
+            img.src = s;
+            document.body.appendChild(img);
+        }
+    }
 }
