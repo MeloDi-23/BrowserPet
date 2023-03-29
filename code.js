@@ -1,7 +1,9 @@
+const FRAME_TIME = 150;
 let img;
 let windowSize = [document.documentElement.clientWidth, document.documentElement.clientHeight];
 let random = (lower, upper) => Math.random()*(upper - lower) + lower;
 let randInt = (max) => Math.floor(Math.random()*max);
+let randChoice = (ls) => ls[randInt(ls.length)];
 let rangeMapsToList = function(end, func) {
     let ret = new Array();
     for(let i = 0; i < end; i++) {
@@ -9,13 +11,12 @@ let rangeMapsToList = function(end, func) {
     }
     return ret;
 }
-const FRAME_TIME = 80;
 
 let Pet = {
     possibleAnimations: {
         wait_left: {name: 'wait_left', frames: rangeMapsToList(3, i => `./img/wait_left/${i+1}.png`)},
         wait_right: {name: 'wait_right', frames: rangeMapsToList(3, i => `./img/wait_right/${i+1}.png`)},
-        shake_head: {name: 'shake_head', frames: rangeMapsToList(2, i => `./img/shake_head/${i+1}.png`)},
+        // shake_head: {name: 'shake_head', frames: rangeMapsToList(2, i => `./img/shake_head/${i+1}.png`)},
         walk_left: {name: 'walk_left', frames: rangeMapsToList(6, i => `./img/walk_left/${i+1}.png`)},
         walk_right: {name: 'walk_right', frames: rangeMapsToList(6, i => `./img/walk_right/${i+1}.png`)},
         // tested, all paths are valid
@@ -41,33 +42,54 @@ let Pet = {
         switch(act.name) {
             case 'move':
                 if(act.speedX + act.speedY) {
+                    // 有速度的情况
                     this.position = [
                         act.startPosition[0] + act.speedX*passes/1000,
                         act.startPosition[1] + act.speedY*passes/1000,
                     ];
-                    // 有速度的情况
                 } else if(act.func) {
+                    // 有位置函数的情况
                     let ret = act.func(passes);
                     this.position = [
                         act.startPosition[0] + ret[0],
                         act.startPosition[1] + ret[1],
                     ];
                     act.animation = chooseAnimation(ret[2], ret[3]);
-                    // 有位置函数的情况
-                    // 还需要改变animation
                 }
 
-                if(this.position[0] > windowSize[0]*0.9 || this.position[0] < windowSize[0]*0.1)
-                //TODO: 调整其位置使之不会越界
-                    this.setSpeed(-act.speedX, act.speedY);
-                if(this.position[1] > windowSize[1]*0.9 || this.position[1] < windowSize[1]*0.1)
-                    this.setSpeed(act.speedX, -act.speedY);
+                if(this.position[0] > windowSize[0]*0.9) {
+                    this.position[0] = windowSize[0]*0.9;
+                    act.speedX = -act.speedX;
+                    this.setAction(
+                        act
+                    );
+                }
+                if(this.position[0] < windowSize[0]*0.1) {
+                    this.position[0] = windowSize[0]*0.1;
+                    act.speedX = -act.speedX;
+                    this.setAction(
+                        act
+                    );
+                }
+                if(this.position[1] > windowSize[1]*0.9) {
+                    this.position[1] = windowSize[1]*0.9;
+                    act.speedY = -act.speedY;
+                    this.setAction(act);
+                }
+                if(this.position[1] < windowSize[1]*0.1) {
+                    this.position[1] = windowSize[1]*0.1;
+                    act.speedY = -act.speedY;
+                    this.setAction(act);
+                }
                 img.style.left = this.position[0] + 'px';
                 img.style.top = this.position[1] + 'px';
                 frame = act.animation.frames;
                 img.src = frame[Math.floor(passes/FRAME_TIME)%frame.length];
                 break;
+            case 'wait_left':
+            case 'wait_right':
             case 'wait':
+            case 'listen':
                 frame = act.animation.frames;
                 img.src = frame[Math.floor(passes/FRAME_TIME)%frame.length];
                 break;
@@ -82,22 +104,21 @@ let Pet = {
          * - move (speedX, speedY).
          * - move (a func which demonstrates the position of pet and its velocity as time passes).
          * - move (destination, speed).
-         * - listening: the browser will listen to the click and demonstrate whether to make pet move.
+         * - listen: the browser will listen to the click and demonstrate whether to make pet move.
          */
-        
         let act = this.currentAction;
         act.startTime = performance.now();
         act.name = action.name;
+        let availableList = new Array();
         switch(action.name) {
             case 'wait':
-                if(action.animationName) {
-                    this.currentAnimation = this.possibleAnimations[action.animationName];
-                } else 
-                if(Math.random() > 0.5) {
-                    this.currentAnimation = this.possibleAnimations.sleep;
-                } else {
-                    this.currentAnimation = this.possibleAnimations.waiting;
-                }
+            case 'listen':
+                availableList.push('wait_right');
+            case 'wait_left':
+                availableList.push('wait_left');
+                break;
+            case 'wait_right':
+                availableList.push('wait_right');
                 break;
             case 'move':
                 act.startPosition = [
@@ -105,32 +126,30 @@ let Pet = {
                     img.offsetTop
                 ];
                 if(!isNaN(action.angle)) {
+                    let degree = (arg) => arg*Math.PI/180;
                     this.setSpeed(
-                        action.speed*Math.cos(action.angle),
-                        action.speed*Math.sin(action.angle)
+                        action.speed*Math.cos(degree(action.angle)),
+                        action.speed*Math.sin(degree(action.angle))
                     );
-                    // act.speedX = action.speed*Math.cos(action.angle);
-                    // act.speedY = action.speed*Math.sin(action.angle);
-                    // act.animation = chooseAnimation(act.speedX, act.speedY);
                 } else if(!isNaN(action.speedX)) {
                     this.setSpeed(action.speedX, action.speedY);
-                    // act.speedX = action.speedX;
-                    // act.speedY = action.speedY;
-                    // act.animation = chooseAnimation(act.speedX, act.speedY);
                 } else if(action.destination) {
                     act.destination = action.destination;
                     let pos1 = this.position, pos2 = act.destination;
                     let x = pos1[0] - pos2[0], y = pos1[1] - pos2[1];
                     let distance = Math.sqrt(x*x + y*y);
-                    // act.speedX = action.speed*x/distance;
-                    // act.speedY = action.speed*y/distance;
                     this.setSpeed(
                         action.speed*x/distance,
                         action.speed*y/distance
                     );
                 }
-                break;
+                return;
         }
+        act.animation = this.possibleAnimations[randChoice(availableList)];
+        act.startPosition = [
+            img.offsetLeft,
+            img.offsetTop
+        ];
     }
 };
 
@@ -148,20 +167,27 @@ function init() {
     initImg();
     document.body.appendChild(img);
 
-    // setInterval(
-    //     randomState,
-    //     //TODO: 编写randState，当不处于listen状态时，随机设置状态
-    // 10000);
+    setTimeout(
+        function t() {
+            randomState();
+            setTimeout(t, random(10000, 20000))
+        }, 10000
+    );
     img.onclick = (e) => {
         // TODO: 设置为listen状态或取消状态
-        switch(e.button) {
-            case 1:
-                break;
-            case 2:
-                break;
+        if(e.button === 0) {
+            if(Pet.currentAction.name == 'listen')
+                Pet.setAction({name: 'move', speed: 20, angle: 80});
+                // TODO: 改为随机方向
+            else
+                Pet.setAction({name: 'listen'});
         }
+        console.log(e);
     };
     window.onclick = (e) => {
+        //TODO: 需要更多调试
+        if(e.button == 0 && Pet.currentAction.name == 'listen')
+            Pet.setAction({name: 'move', speed: 20, destination: [e.clientX, e.clientY]});
         //TODO 如果pet为listen状态，则设置状态为移动
     };
 }
@@ -178,6 +204,41 @@ function initImg() {
     // randomState();
 }
 
+function randomState() {
+    let num = Math.random();
+    let availableList = new Array();
+    let randAngle = () => random(0, 360);
+    switch(Pet.currentAction.name) {
+        case 'listen':
+            availableList.push('wait_left');
+            availableList.push('wait_right');
+            let name = Math.random() > 0.5 ? 'wait_left': 'wait_right';
+            Pet.setAction(name);
+        case 'wait_left':
+        case 'wait_right':
+            var list2 = new Array();
+            for(e in Pet.possibleAnimations)
+                if(/^wait_[a-zA-Z]+$/.test(e))
+                    list2.push(2);
+                else
+                    availableList.push(e);
+            
+            
+            if(Math.random() > 0.7) {
+                Pet.setAction(randChoice(availableList));
+            } else {
+                Pet.setAction(randChoice(list2));
+            }
+            break;
+        case 'walk_left':
+        case 'walk_right':
+            for(e in Pet.possibleAnimations)
+                availableList.push(e);
+            Pet.setAction(randChoice(availableList));
+            break;
+    }
+    
+}
 
 window.onload = function() {
     for(let e in Pet.possibleAnimations) {
@@ -196,7 +257,7 @@ window.onload = function() {
         {
             name: 'move',
             angle: 0,
-            speed: 20
+            speed: 40
         }
     );
     requestAnimationFrame(function f(t) {
