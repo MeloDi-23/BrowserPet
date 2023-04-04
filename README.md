@@ -25,3 +25,5 @@ I've always wanted to made a pet in my browser, so I'm doing so!
 - 考虑为跳跃增加纵向位移来模拟跳跃
 
 另外，感谢[terraria wiki](https://terraria.wiki.gg/zh/wiki/皇家美味)提供资源，感谢相关在线网站提供的图像编辑功能。
+
+Two versions: one for the main.html, while another is for the tampermonkey. However, if you'd want to use it, you have to change the path of files.

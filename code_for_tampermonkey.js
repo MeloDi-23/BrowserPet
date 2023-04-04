@@ -1,9 +1,22 @@
+// ==UserScript==
+// @name         Slime Pet
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  try to take over the world!
+// @author       You
+// @match        *://*/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=undefined.
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
 const FRAME_TIME = 150;
 const SCALE = 0.05;
 let img;
 let ID;
 let windowSize = [document.documentElement.clientWidth, document.documentElement.clientHeight];
-imgSize = windowSize[1] * SCALE;
+let imgSize = windowSize[1] * SCALE;
 let rangeHor = [0, windowSize[0] - imgSize], rangeVer = [0, windowSize[1] - imgSize];
 
 let random = (lower, upper) => Math.random()*(upper - lower) + lower;
@@ -19,11 +32,11 @@ let rangeMapsToList = function(end, func) {
 
 let Pet = {
     animations: {
-        wait_left: {name: 'wait_left', frames: rangeMapsToList(3, i => `./img/wait_left/${i+1}.png`)},
-        wait_right: {name: 'wait_right', frames: rangeMapsToList(3, i => `./img/wait_right/${i+1}.png`)},
-        shake_head: {name: 'shake_head', frames: rangeMapsToList(2, i => `./img/shake_head/${i+1}.png`)},
-        walk_left: {name: 'walk_left', frames: rangeMapsToList(6, i => `./img/walk_left/${i+1}.png`)},
-        walk_right: {name: 'walk_right', frames: rangeMapsToList(6, i => `./img/walk_right/${i+1}.png`)},
+        wait_left: {name: 'wait_left', frames: rangeMapsToList(3, i => `https://melodi-23.github.io/BrowserPet/img/wait_left/${i+1}.png`)},
+        wait_right: {name: 'wait_right', frames: rangeMapsToList(3, i => `https://melodi-23.github.io/BrowserPet/img/wait_right/${i+1}.png`)},
+        shake_head: {name: 'shake_head', frames: rangeMapsToList(2, i => `https://melodi-23.github.io/BrowserPet/img/shake_head/${i+1}.png`)},
+        walk_left: {name: 'walk_left', frames: rangeMapsToList(6, i => `https://melodi-23.github.io/BrowserPet/img/walk_left/${i+1}.png`)},
+        walk_right: {name: 'walk_right', frames: rangeMapsToList(6, i => `https://melodi-23.github.io/BrowserPet/img/walk_right/${i+1}.png`)},
         // tested, all paths are valid
     },
     possibleActions: {// key is the action name, value is whether it moves
@@ -49,7 +62,7 @@ let Pet = {
 };
 
 Pet.updateImg = function(time) {
-    // A SMALL PROBLEM: sometimes the requireAnimationFrame and setAction contradicts, 
+    // A SMALL PROBLEM: sometimes the requireAnimationFrame and setAction contradicts,
     // so the startTime may be smaller than time.
     // I add a judgement to see whether the `passes` is positive.
     // It is probably caused because the requireAnimationFrame call this function very freguently.
@@ -119,7 +132,7 @@ Pet.updateImg = function(time) {
 
             {
                 let frame = act.animation.frames;
-            
+
                 let count = Math.floor(passes/FRAME_TIME)%frame.length;
                 setImg(frame[count]);
 
@@ -132,7 +145,6 @@ Pet.updateImg = function(time) {
             // TODO: set random shake head animation
             let frame = act.animation.frames;
             setImg(frame[Math.floor(passes/FRAME_TIME/2)%frame.length]);
-
             break;
         }
         case 'jump': {
@@ -165,18 +177,18 @@ Pet.setAction = function(action) {
     // TODO: add a return value that demonstrate the next call time.
     // in listen mode, clear the time out
     // when cancel the listen mode, revive the set time out
-    console.log(action.type);
     let act = new Map();
     act.type = action.type;
     switch(action.type) {
         case 'wait':
-        case 'listen':
+        case 'listen': {
             let availableList = [
                 'wait_right',
                 'wait_left'
             ]
             act.animation = this.animations[randChoice(availableList)];
             break;
+        }
         case 'move':
             switch(true) {
                 case !isNaN(action.angle): {
@@ -195,7 +207,7 @@ Pet.setAction = function(action) {
                     act.speedX = action.speedX;
                     act.speedY = action.speedY
                     break;
-                case Boolean(action.destination):
+                case Boolean(action.destination): {
                     act.destination = action.destination;
                     let pos1 = this.position, pos2 = act.destination;
                     let x = pos2[0] - pos1[0], y = pos2[1] - pos1[1];
@@ -204,6 +216,7 @@ Pet.setAction = function(action) {
                     act.speedY = action.speed*y/distance;
                     clearTimeout(ID);
                     break;
+                }
             }
             if(act.speedX >= 0)
                 act.animation = this.animations.walk_right;
@@ -246,8 +259,8 @@ Pet.randAction = function() {
             // clearTimeout(ID);
             // ID = null;
             return -1;
-            
-        case 'wait':
+
+        case 'wait': {
             let match = this.currentAction.animation.name.match(/^wait_([a-zA-Z]+)$/);
             let rd = Math.random();
             switch(true) {
@@ -265,6 +278,7 @@ Pet.randAction = function() {
                         this.setAction({type: 'wait', animation: 'wait_right'});
             }
             break;
+        }
         case 'move': {
             if(this.currentAction.destination)
                 // 有目的地，禁用随机行走
@@ -317,7 +331,7 @@ function init() {
     };
     initImg();
     document.body.appendChild(img);
-    
+
     img.addEventListener('click', (e) => {
         // console.log(e);
         if(e.button === 0 && e.ctrlKey) {
@@ -333,7 +347,6 @@ function init() {
         //TODO: 需要更多调试
         if(e.button == 0 && !e.ctrlKey && Pet.currentAction.type == 'listen') {
             Pet.setAction({type: 'move', speed: 20, destination: [e.clientX, e.clientY]});
-            console.log(e);
         }
         //TODO 如果pet为listen状态，则设置状态为定点移动
     };
@@ -343,7 +356,8 @@ function init() {
 
 function initImg() {
     img = document.createElement('img');
-
+    img.id = 'slime_pet';
+    img.style.zIndex = '999';
     img.style.position = 'fixed';
 
     img.style.height = imgSize + 'px';
@@ -352,42 +366,22 @@ function initImg() {
     img.style.left = random(rangeHor[0], rangeHor[1]) + 'px';
     img.style.top = random(rangeVer[0], rangeVer[1]) + 'px';
 }
-
-function setImg(path, _img=undefined) {
-    if(!_img)
-        _img = img;
-    try {
-        _img.src = path;
-    } catch(err) {
-        console.error('the error was caught');
-    }
-    _img.alt = path;
+function setImg(src) {
+    img.src = src;
+    img.alt = src;
 }
 
-window.onload = function() {
-    let div = document.createElement('div');
-    div.style.zIndex = '999';
-    for(let e in Pet.animations) {
-        let div = document.createElement('div');
-        div.innerHTML = e.replace('_', ' ');
-        document.body.appendChild(div);
-        
-        for(let s of Pet.animations[e].frames) {
-            let img = document.createElement('img');
-            setImg(s, img);
-            document.body.appendChild(img);
-        }
+init();
+Pet.setAction(
+    {
+        type: 'move',
+        angle: 'random',
+        speed: 40
     }
-    init();
-    Pet.setAction(
-        {
-            type: 'move',
-            angle: 0,
-            speed: 40
-        }
-    );
-    requestAnimationFrame(function f(t) {
-        Pet.updateImg(t);
-        requestAnimationFrame(f);
-    })
-}
+);
+requestAnimationFrame(function f(t) {
+    Pet.updateImg(t);
+    requestAnimationFrame(f);
+});
+console.log('- Slime Pet: activated');
+})();
