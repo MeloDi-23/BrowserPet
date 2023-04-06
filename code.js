@@ -165,7 +165,6 @@ Pet.setAction = function(action) {
     // TODO: add a return value that demonstrate the next call time.
     // in listen mode, clear the time out
     // when cancel the listen mode, revive the set time out
-    console.log(action.type);
     let act = new Map();
     act.type = action.type;
     switch(action.type) {
@@ -319,7 +318,6 @@ function init() {
     document.body.appendChild(img);
     
     img.addEventListener('click', (e) => {
-        // console.log(e);
         if(e.button === 0 && e.ctrlKey) {
             if(Pet.currentAction.type == 'listen')
                 Pet.setAction({type: 'move', speed: 20, angle: 'random'});
@@ -330,12 +328,9 @@ function init() {
         }
     }, {passionate: false});
     window.onclick = (e) => {
-        //TODO: 需要更多调试
         if(e.button == 0 && !e.ctrlKey && Pet.currentAction.type == 'listen') {
             Pet.setAction({type: 'move', speed: 20, destination: [e.clientX, e.clientY]});
-            console.log(e);
         }
-        //TODO 如果pet为listen状态，则设置状态为定点移动
     };
 
     startRand();
@@ -356,11 +351,7 @@ function initImg() {
 function setImg(path, _img=undefined) {
     if(!_img)
         _img = img;
-    try {
-        _img.src = path;
-    } catch(err) {
-        console.error('the error was caught');
-    }
+    _img.src = path;
     _img.alt = path;
 }
 

@@ -3,9 +3,12 @@ A browser pet made by javascript
 
 I've always wanted to made a pet in my browser, so I'm doing so!
 
+Two versions: one for the main.html, the demo is [here](./demo.html), while another is for the tampermonkey. However, if you'd want to use it, you have to change the path of files.
+
 ## 当前思路：
 
 - 通过requireAnimationFrame更新状态（图像，位置）。需要记录开始时间，计算图像的序号，计算位置等。
+
 - 记录所有可行动画，记录每帧图像的源。
 
 - 保留一个接口改变其运动状态：
@@ -25,5 +28,3 @@ I've always wanted to made a pet in my browser, so I'm doing so!
 - 考虑为跳跃增加纵向位移来模拟跳跃
 
 另外，感谢[terraria wiki](https://terraria.wiki.gg/zh/wiki/皇家美味)提供资源，感谢相关在线网站提供的图像编辑功能。
-
-Two versions: one for the main.html, while another is for the tampermonkey. However, if you'd want to use it, you have to change the path of files.
